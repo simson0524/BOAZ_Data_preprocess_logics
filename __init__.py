@@ -1,1 +1,1 @@
-
+print("Hello Foreigner!")
