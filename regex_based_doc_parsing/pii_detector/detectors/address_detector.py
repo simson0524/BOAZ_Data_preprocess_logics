@@ -10,7 +10,7 @@ class AddressDetector:
         self.sigungu_pattern = re.compile(f"({'|'.join(map(re.escape, sigungu_list))})")
         self.dong_pattern = re.compile(f"({'|'.join(map(re.escape, dong_list))})")
         self.apt_pattern = re.compile(r"[가-힣]{2,20}(아파트|오피스텔|빌라|타워|센트럴|팰리스|스퀘어|리버|하우스|레지던스)")
-        self.ho_pattern = re.compile(r"\d+동\s*\d+호|\d+호|\d+층")
+        self.ho_pattern = re.compile(r"\d+동\s*\d+호|\d+층\s*\d+호")
 
         # 전체 주소 블록 패턴
         self.address_block_pattern = re.compile(
@@ -39,19 +39,19 @@ class AddressDetector:
                     "score": score
                 })
 
-                # ✅ 2. 아파트 + ho/층 패턴을 이 블록 안에서 다시 탐지
-                apt_match = self.apt_pattern.search(text, start, end)
-                if apt_match:
-                    apt_end = apt_match.end()
-                    ho_match = self.ho_pattern.match(text, pos=apt_end)
-                    if ho_match and ho_match.end() <= end:  # ho가 블록 범위 내에 있을 때만
-                        results.append({
-                            "start": ho_match.start(),
-                            "end": ho_match.end(),
-                            "label": "ho",
-                            "match": ho_match.group(),
-                            "score": None
-                        })
+                # # ✅ 2. 아파트 + ho/층 패턴을 이 블록 안에서 다시 탐지
+                # apt_match = self.apt_pattern.search(text, start, end)
+                # if apt_match:
+                #     apt_end = apt_match.end()
+                #     ho_match = self.ho_pattern.match(text, pos=apt_end)
+                #     if ho_match and ho_match.end() <= end:  # ho가 블록 범위 내에 있을 때만
+                #         results.append({
+                #             "start": ho_match.start(),
+                #             "end": ho_match.end(),
+                #             "label": "ho",
+                #             "match": ho_match.group(),
+                #             "score": None
+                #         })
 
         # ✅ 3. 개별 주소 성분도 계속 탐지
         for pattern, label in [
@@ -81,16 +81,16 @@ class AddressDetector:
         has_ho = bool(self.ho_pattern.search(address))
 
         # 점수 기준
-        if has_sido and has_sigungu and has_apt and has_ho:
+        if has_sido and has_sigungu and has_dong and has_apt and has_ho:
             return 1.0
-        if has_sido and has_sigungu and has_apt:
-            return 0.8
-        if has_sigungu and has_apt:
-            return 0.6
-        if has_dong and has_apt:
-            return 0.6
-        if has_sido and has_sigungu and has_dong:
+        if has_sido and has_sigungu and has_dong and has_apt:
             return 0.5
+        if has_sigungu and has_apt:
+            return 0.4
+        if has_dong and has_apt:
+            return 0.4
+        if has_sido and has_sigungu and has_dong:
+            return 0.3
         if has_sido and has_sigungu:
             return 0.3
         if has_sido:

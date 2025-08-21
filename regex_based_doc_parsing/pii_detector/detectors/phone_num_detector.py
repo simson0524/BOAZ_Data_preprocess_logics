@@ -29,7 +29,7 @@ class PhoneDetector:
             results.append({
                 'start': start,
                 'end': end,
-                'label': 'mobile_phone',
+                'label': '전화번호',
                 'match': phone_number,
                 'score': 1.0
             })
@@ -41,7 +41,7 @@ class PhoneDetector:
             results.append({
                 'start': start,
                 'end': end,
-                'label': 'landline_phone',
+                'label': '전화번호',
                 'match': phone_number,
                 'score': 0.5
             })

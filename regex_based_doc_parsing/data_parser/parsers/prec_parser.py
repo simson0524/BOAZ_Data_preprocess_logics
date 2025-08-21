@@ -1,8 +1,14 @@
 # BOAZ_Data_preprocess_logics\regex_based_doc_parsing\data_parser\parsers\prec_parser.py
 
 from typing import Dict, List, Any
+from regex_based_doc_parsing.data_parser.parsers.base import BaseParser
+from regex_based_doc_parsing.data_parser.utils_.text_utils import split_sentences 
+from pykospacing import Spacing
 
 class PrecParser(BaseParser):
+    def __init__(self):
+        self.spacer = Spacing()
+        
     def extract_and_split(self, data: Dict[str, Any]) -> List[Dict[str, str]]:
         out: List[Dict[str, str]] = []
         prec = data.get("PrecService", {})
@@ -23,11 +29,12 @@ class PrecParser(BaseParser):
             txt = txt.replace("<br/>", " ")
 
             for sent in split_sentences(txt):
-                for chunk, _ in chunk_text_with_offsets(sent):
+                for txt in split_sentences(sent):
+                    txt = self.spacer(txt)
                     out.append({
                         "section": section,
                         "field": field,
-                        "sentence": chunk
+                        "sentence": txt
                     })
 
         return out

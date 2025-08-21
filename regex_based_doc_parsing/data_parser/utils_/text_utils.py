@@ -1,3 +1,19 @@
+import re
+import json
+import time
+import os
+from pathlib import Path
+from typing import List, Dict, Any, Tuple
+from transformers import AutoTokenizer
+from konlpy.tag import Okt
+
+okt = Okt()
+
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+
+# MAX_LEN = 256
+# STRIDE = 64
+
 def split_sentences(text: str) -> List[str]:
     # 🔹 모든 줄바꿈 관련 문자 제거 (\n, \r, 유니코드 줄바꿈 등)
     text = re.sub(r"[\r\n\u2028]+", "", text)
@@ -14,4 +30,6 @@ def split_sentences(text: str) -> List[str]:
             p += '.'
         sents.append(p)
     return sents
+
+
 

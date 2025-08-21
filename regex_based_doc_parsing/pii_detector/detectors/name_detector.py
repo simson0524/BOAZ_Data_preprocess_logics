@@ -63,7 +63,7 @@ class NameDetector:
             results.append({
                 "start": start,
                 "end": end,
-                "label": "name",
+                "label": "인물",
                 "match": name_clean
             })
 
@@ -104,7 +104,7 @@ class NameDetector:
 
         # 블러 처리: **수
         if len(name) == 3 and name[2] in self.nn2 and name[:2] == '**':
-            return 0.5
+            return 0.4
 
         # 마스킹된 이름 처리
         if any([

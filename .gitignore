@@ -1,2 +1,5 @@
 __pycache__/
 data_/
+
+venv311/
+.venv311/

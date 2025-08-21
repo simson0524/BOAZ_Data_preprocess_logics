@@ -26,7 +26,7 @@ class BirthAgeDetector(BaseDetector):
                 results.append({
                     "start": m.start(),
                     "end": m.end(),
-                    "label": "birth_or_age"
+                    "label": "나이"
                 })
 
         return results
@@ -56,7 +56,7 @@ class BirthAgeDetector(BaseDetector):
         elif year_2digit_with_birth.fullmatch(value):
             return 1.0
         elif ymd_pattern_only.fullmatch(value):
-            return 0.5
+            return 0.4
         elif age_pattern.fullmatch(value):
             return 0.5
         elif year_only_plain.fullmatch(value):

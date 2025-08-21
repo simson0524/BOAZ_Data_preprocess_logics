@@ -33,7 +33,7 @@ class JuminDetector:
                 results.append({
                     'start': match.start(),
                     'end': match.end(),
-                    'label': 'jumin',
+                    'label': '주민번호',
                     'match': match.group(),
                     'score': score
                 })

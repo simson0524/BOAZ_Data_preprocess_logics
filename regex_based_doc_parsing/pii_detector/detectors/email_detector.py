@@ -26,7 +26,7 @@ class EmailDetector:
             results.append({
                 "start": match.start(1),
                 "end": match.end(1),
-                "label": "email",
+                "label": "이메일주소",
                 "match": email
             })
         return results
