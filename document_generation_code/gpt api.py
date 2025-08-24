@@ -458,7 +458,7 @@ Department = "인사부, 개발부, 관리부, 영업부,기술부"
 n = 5      # 전체 부서 개수
 target = "인사부"
 
-for i in range(4):
+for i in range(26):
     form_log = generate_data(company, Department, target, n, document_form, api_key=WW_GPT_API_KEY)
     all_tables: List[pd.DataFrame] = []
     dfs_by_title: Dict[str, pd.DataFrame] = {}  # 문서별 DF가 필요할 때 사용
@@ -505,7 +505,7 @@ for i in range(4):
         all_df = pd.concat(all_tables, ignore_index=True)
         all_df = all_df.reindex(columns=HEADER)
         all_df = all_df[all_df.apply(lambda r: any(str(x).strip() for x in r.values), axis=1)]
-        csv_path = OUT_DIR / f"all_tables_개발부_{i+1}.csv"
+        csv_path = OUT_DIR / f"all_tables_{target}_{i+1}.csv"
         OUT_DIR.mkdir(parents=True, exist_ok=True)
         all_df.to_csv(csv_path, index=False, encoding="utf-8-sig")
 
