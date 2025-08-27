@@ -458,7 +458,7 @@ Department = "인사부, 개발부, 관리부, 영업부,기술부"
 n = 5      # 전체 부서 개수
 target = "인사부"
 
-for i in range(26):
+for i in range(25):
     form_log = generate_data(company, Department, target, n, document_form, api_key=WW_GPT_API_KEY)
     all_tables: List[pd.DataFrame] = []
     dfs_by_title: Dict[str, pd.DataFrame] = {}  # 문서별 DF가 필요할 때 사용
