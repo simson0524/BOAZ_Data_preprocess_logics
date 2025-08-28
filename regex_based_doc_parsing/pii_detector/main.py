@@ -52,6 +52,14 @@ def run_pii_detection(text: str) -> List[Dict]:
     주어진 텍스트에서 모든 디텍터를 돌며 PII를 탐지하고 결과 리스트 반환
     """
     results = []
+    detectors = [
+    AddressDetector(sido_list, sigungu_list, dong_list),
+    EmailDetector(),
+    JuminDetector(),
+    PhoneDetector(),
+    CardNumDetector()
+    ]
+
 
     for detector in detectors:
         matches = detector.detect(text) # detect 하는 부분
@@ -142,7 +150,7 @@ def process_sentence_split_json(input_folder: Path, output_folder: Path,case_fie
                         "정보 유형": r["label"],
                         "score": r.get("score", None),
                         #"score" : 1.0,
-                        "저장 경로": str(file_path.name)
+                        #"저장 경로": str(file_path.name)
                     })
 
                 formatted = convert_to_target_format(
@@ -245,37 +253,58 @@ def process_sentence_split_json(input_folder: Path, output_folder: Path,case_fie
 
 # openai pii detector --------------------------------------------------------------
 
+# if __name__ == "__main__":
+#     print("🚀 OpenAI PII Detector 시작됨") 
+
+#     # 입력/출력 경로 설정
+#     input_path = Path(r"C:\Users\megan\onestone\BOAZ_Data_preprocess_logics\regex_based_doc_parsing\data_\sentence_split_json\openai")
+#     output_path = Path(r"C:\Users\megan\onestone\BOAZ_Data_preprocess_logics\regex_based_doc_parsing\data_\pii_detection_output\openai")
+
+#     case_field = "0"
+#     #detail_field = "OpenAI"
+
+#     all_rows = process_sentence_split_json(input_path, output_path, case_field=case_field)
+    
+
+    # if not all_rows:
+    #     print("⚠️ OpenAI 폴더에서 PII가 탐지되지 않음")
+    # else:
+    #     df = pd.DataFrame(all_rows)
+    #     df_j = df[df["식별/준식별"] == "준식별"]
+    #     df_p = df[df["식별/준식별"] != "준식별"]
+
+    #     base_path = Path(r"C:\Users\megan\onestone\BOAZ_Data_preprocess_logics\regex_based_doc_parsing\data_")
+    #     output_j_csv = base_path / "output_openai_j.csv"
+    #     output_p_csv = base_path / "output_openai_p.csv"
+
+    #     # 기존 파일 삭제
+    #     if output_j_csv.exists():
+    #         os.remove(output_j_csv)
+    #     if output_p_csv.exists():
+    #         os.remove(output_p_csv)
+
+    #     df_j.to_csv(output_j_csv, index=False, encoding="utf-8-sig")
+    #     df_p.to_csv(output_p_csv, index=False, encoding="utf-8-sig")
+
+    #     print(f"✅ OpenAI PII 탐지 완료: {len(df_j)} 준식별, {len(df_p)} 식별 rows 저장됨")
+
+
 if __name__ == "__main__":
-    print("🚀 OpenAI PII Detector 시작됨") 
+    print("🚀 run_pii_detection 단일 테스트 실행")
 
-    # 입력/출력 경로 설정
-    input_path = Path(r"C:\Users\megan\onestone\BOAZ_Data_preprocess_logics\regex_based_doc_parsing\data_\sentence_split_json\openai")
-    output_path = Path(r"C:\Users\megan\onestone\BOAZ_Data_preprocess_logics\regex_based_doc_parsing\data_\pii_detection_output\openai")
+    test_sentences = [
+        "홍길동은 서울특별시 강남구 테헤란로 123에 거주하고 있으며, 전화번호는 010-1234-5678이다.",
+        "김영희의 이메일은 younghee@example.com이고, 주민번호는 900101-2345678이다.",
+        "카드번호 1234-5678-9876-5432는 유효하지 않습니다."
+    ]
 
-    case_field = "0"
-    #detail_field = "OpenAI"
-
-    all_rows = process_sentence_split_json(input_path, output_path, case_field=case_field)
-
-    if not all_rows:
-        print("⚠️ OpenAI 폴더에서 PII가 탐지되지 않음")
-    else:
-        df = pd.DataFrame(all_rows)
-        df_j = df[df["식별/준식별"] == "준식별"]
-        df_p = df[df["식별/준식별"] != "준식별"]
-
-        base_path = Path(r"C:\Users\megan\onestone\BOAZ_Data_preprocess_logics\regex_based_doc_parsing\data_")
-        output_j_csv = base_path / "output_openai_j.csv"
-        output_p_csv = base_path / "output_openai_p.csv"
-
-        # 기존 파일 삭제
-        if output_j_csv.exists():
-            os.remove(output_j_csv)
-        if output_p_csv.exists():
-            os.remove(output_p_csv)
-
-        df_j.to_csv(output_j_csv, index=False, encoding="utf-8-sig")
-        df_p.to_csv(output_p_csv, index=False, encoding="utf-8-sig")
-
-        print(f"✅ OpenAI PII 탐지 완료: {len(df_j)} 준식별, {len(df_p)} 식별 rows 저장됨")
-
+    for idx, text in enumerate(test_sentences, 1):
+        print(f"\n📌 테스트 문장 {idx}: {text}")
+        results = run_pii_detection(text)
+        for r in results:
+            print(
+                f"매치: {r['match']}, "
+                f"라벨: {r['label']}, "
+                f"위치: ({r['start']}, {r['end']}), "
+                f"score: {r['score']:.2f}"
+            )
