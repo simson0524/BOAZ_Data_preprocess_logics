@@ -23,10 +23,18 @@ class EmailDetector:
         results = []
         for match in self.email_pattern.finditer(text):
             email = match.group(1)
+            
+            # 점수 계산: 마스킹 여부 체크
+            if "*" in email or "…" in email:
+                score = 0.5
+            else:
+                score = 1.0
+
             results.append({
                 "start": match.start(1),
                 "end": match.end(1),
                 "label": "이메일주소",
-                "match": email
+                "match": email,
+                "score": score
             })
         return results

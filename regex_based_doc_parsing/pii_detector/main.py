@@ -3,11 +3,12 @@ import json
 from pathlib import Path
 from typing import List, Dict
 from detectors.name_detector import NameDetector
-from detectors.address_detector2 import AddressDetector
+from detectors.address_detector import AddressDetector
 from detectors.birth_age_detector import BirthAgeDetector
 from detectors.email_detector import EmailDetector
 from detectors.personal_id_detector import JuminDetector
 from detectors.phone_num_detector import PhoneDetector
+from detectors.card_num_detector import CardNumDetector
 from Dict.address_dict import sido_list, sigungu_list, dong_list
 from Dict.name_dict import sn1, nn1, nn2, name
 from Dict.stopwords_dict import stopwords
@@ -21,7 +22,8 @@ detectors = [
     BirthAgeDetector(),
     EmailDetector(),
     JuminDetector(),
-    PhoneDetector()
+    PhoneDetector(),
+    CardNumDetector()
     # 
     # ,
 ]
@@ -30,9 +32,10 @@ detectors = [
 DETECTOR_TYPE_MAP = {
     "인물": {"개인/기밀": "개인", "식별/준식별": "식별"},
     "도시": {"개인/기밀": "개인", "식별/준식별": "준식별"},
+    "카드번호" : {"개인/기밀": "개인", "식별/준식별": "준식별"},
     "도, 주": {"개인/기밀": "개인", "식별/준식별": "준식별"},
     "군, 면, 동": {"개인/기밀": "개인", "식별/준식별": "준식별"},
-    #"시, 군, 구": {"개인/기밀": "개인", "식별/준식별": "준식별"},
+    "도로명": {"개인/기밀": "개인", "식별/준식별": "준식별"},
     "건물명": {"개인/기밀": "개인", "식별/준식별": "준식별"},
     "주소숫자": {"개인/기밀": "개인", "식별/준식별": "준식별"},
     "나이": {"개인/기밀": "개인", "식별/준식별": "식별"},
@@ -49,6 +52,14 @@ def run_pii_detection(text: str) -> List[Dict]:
     주어진 텍스트에서 모든 디텍터를 돌며 PII를 탐지하고 결과 리스트 반환
     """
     results = []
+    detectors = [
+    AddressDetector(sido_list, sigungu_list, dong_list),
+    EmailDetector(),
+    JuminDetector(),
+    PhoneDetector(),
+    CardNumDetector()
+    ]
+
 
     for detector in detectors:
         matches = detector.detect(text) # detect 하는 부분
@@ -59,16 +70,9 @@ def run_pii_detection(text: str) -> List[Dict]:
             if isinstance(detector, AddressDetector):
             # 이미 내부 라벨이 들어있으니 건드리지 않음
                 pass
-            #m["label"] = detector.__class__.__name__.replace("Detector", "") #detector 이름에서 detector만 빼면 AddressDetector -> Address
-                #m["score"] = detector.score(m["match"])
+            
             if "score" not in m or m["score"] is None:
-    #             m["score"] = 0.0
-
-    #             score = detector.score(m["match"]) if hasattr(detector, "score") else None
-    #             m["score"] = score if score is not None else 0.0
-    #         results.append(m)
-
-    # return results
+    
                 if hasattr(detector, "score"):
                     m["score"] = detector.score(m["match"])
                 else:
@@ -125,7 +129,7 @@ def process_sentence_split_json(input_folder: Path, output_folder: Path,case_fie
     output_folder.mkdir(parents=True, exist_ok=True)
     all_rows = [] 
 
-    for file_path in input_folder.glob("*.json"):
+    for file_path in input_folder.rglob("*.json"):
         print(f"📄 처리 중: {file_path.name}")
         try:
             data = json.loads(file_path.read_text(encoding="utf-8"))
@@ -139,7 +143,7 @@ def process_sentence_split_json(input_folder: Path, output_folder: Path,case_fie
                     label_type = r["label"]
                     label_info = DETECTOR_TYPE_MAP.get(label_type, {"개인/기밀": "", "식별/준식별": ""})
                     all_rows.append({
-                        "도메인": detail_field,
+                        "도메인": file_path.parent.name,
                         "단어": r["match"],
                         "개인/기밀": label_info["개인/기밀"],
                         "식별/준식별": label_info["식별/준식별"],
@@ -165,104 +169,142 @@ def process_sentence_split_json(input_folder: Path, output_folder: Path,case_fie
         except Exception as e:
             print(f"❌ 에러 발생 - {file_path.name}: {e}")
     return all_rows  
-    # ✅ DataFrame 저장
-    #df = pd.DataFrame(all_rows)
+    
 
-    # 준식별 / 그 외 분리
-    # df_j = df[df["식별/준식별"] == "준식별"]
-    # df_p = df[df["식별/준식별"] != "준식별"]
-    #print(f"DataFrame columns: {df.columns}")
 
-    # if "식별/준식별" in df.columns:
+# 법률 도메인 pii detector--------------------------------------------------------------------------------------
+
+
+
+# if __name__ == "__main__":
+#     print("🚀 PII Detector 시작됨") 
+    
+#     # 각 도메인별 입력·출력·필드 매핑
+#     domain_config = {
+#         "민사": {"input": "regex_based_doc_parsing/data_/sentence_split_json/1.민사/set1",
+#                "output": "regex_based_doc_parsing/data_/pii_detection_output/민사/set1",
+#                "case_field": "1", "detail_field": "1"},
+#         "가사": {"input": "regex_based_doc_parsing/data_/sentence_split_json/2.가사/set1",
+#                "output": "regex_based_doc_parsing/data_/pii_detection_output/가사/set1",
+#                "case_field": "1", "detail_field": "2"},
+#         "특허": {"input": "regex_based_doc_parsing/data_/sentence_split_json/3.특허/set1",
+#                "output": "regex_based_doc_parsing/data_/pii_detection_output/특허/set1",
+#                "case_field": "1", "detail_field": "3"},
+#         "행정": {"input": "regex_based_doc_parsing/data_/sentence_split_json/4.행정/set1",
+#                "output": "regex_based_doc_parsing/data_/pii_detection_output/행정/set1",
+#                "case_field": "2", "detail_field": "4"},
+#         "형사": {"input": "regex_based_doc_parsing/data_/sentence_split_json/5.형사/set1",
+#                "output": "regex_based_doc_parsing/data_/pii_detection_output/형사/set1",
+#                "case_field": "3", "detail_field": "5"},
+#     }
+
+#     base_path = Path("C:/Users/megan/onestone/BOAZ_Data_preprocess_logics/regex_based_doc_parsing/data_/")
+#     output_j_csv = base_path / "output_j.csv"
+#     output_p_csv = base_path / "output_p.csv"
+
+#     # CSV 파일 초기화 (맨 처음에만 헤더 포함)
+#     if output_j_csv.exists():
+#         os.remove(output_j_csv)
+#     if output_p_csv.exists():
+#         os.remove(output_p_csv)
+
+#     write_header_j = True
+#     write_header_p = True
+
+#     all_rows = []
+#     for domain, cfg in domain_config.items():
+#         print(f"📂 {domain} 처리 시작")
+#         case_field = cfg["case_field"]
+#         detail_field = cfg["detail_field"]
+
+#         input_path = Path(cfg["input"])
+#         output_path = Path(cfg["output"])
+
+#         rows = process_sentence_split_json(input_path, output_path,
+#                                            case_field=case_field, detail_field=detail_field)
+
+#         if rows:
+#             all_rows.extend(rows)
+#         else:
+#             print(f"⚠️ {domain}에서 탐지된 결과 없음")
+
+#     if not all_rows:
+#         print("⚠️ 모든 도메인에서 결과가 없습니다.")
+#     else:
+#         df = pd.DataFrame(all_rows)
+#         df_j = df[df["식별/준식별"] == "준식별"]
+#         df_p = df[df["식별/준식별"] != "준식별"]
+
+#         base_path = Path("C:/Users/megan/onestone/BOAZ_Data_preprocess_logics/regex_based_doc_parsing/data_/")
+#         output_j_csv = base_path / "output_j.csv"
+#         output_p_csv = base_path / "output_p.csv"
+
+#         # 혹시 기존 파일 삭제
+#         if output_j_csv.exists():
+#             os.remove(output_j_csv)
+#         if output_p_csv.exists():
+#             os.remove(output_p_csv)
+
+#         df_j.to_csv(output_j_csv, index=False, encoding="utf-8-sig")
+#         df_p.to_csv(output_p_csv, index=False, encoding="utf-8-sig")
+
+#         print(f"✅ 모든 도메인의 결과를 누적하여 저장 완료: {len(df_j)} 준식별 rows, {len(df_p)} 식별 rows")
+    
+
+# openai pii detector --------------------------------------------------------------
+
+# if __name__ == "__main__":
+#     print("🚀 OpenAI PII Detector 시작됨") 
+
+#     # 입력/출력 경로 설정
+#     input_path = Path(r"C:\Users\megan\onestone\BOAZ_Data_preprocess_logics\regex_based_doc_parsing\data_\sentence_split_json\openai")
+#     output_path = Path(r"C:\Users\megan\onestone\BOAZ_Data_preprocess_logics\regex_based_doc_parsing\data_\pii_detection_output\openai")
+
+#     case_field = "0"
+#     #detail_field = "OpenAI"
+
+#     all_rows = process_sentence_split_json(input_path, output_path, case_field=case_field)
+    
+
+    # if not all_rows:
+    #     print("⚠️ OpenAI 폴더에서 PII가 탐지되지 않음")
+    # else:
+    #     df = pd.DataFrame(all_rows)
     #     df_j = df[df["식별/준식별"] == "준식별"]
     #     df_p = df[df["식별/준식별"] != "준식별"]
-    # else:
-    #     print("Warning: '식별/준식별' 컬럼 없음")
-    #     df_j = pd.DataFrame()
-    #     df_p = pd.DataFrame()
 
-    # base_path = Path("C:/Users/megan/onestone/BOAZ_Data_preprocess_logics/regex_based_doc_parsing/data_/")
-    # df_j.to_csv(base_path / "output_j.csv", index=False, encoding="utf-8-sig")
-    # df_p.to_csv(base_path / "output_p.csv", index=False, encoding="utf-8-sig")
+    #     base_path = Path(r"C:\Users\megan\onestone\BOAZ_Data_preprocess_logics\regex_based_doc_parsing\data_")
+    #     output_j_csv = base_path / "output_openai_j.csv"
+    #     output_p_csv = base_path / "output_openai_p.csv"
 
-    # print(f"📁 output_j.csv → {len(df_j)} rows 저장 완료")
-    # print(f"📁 output_p.csv → {len(df_p)} rows 저장 완료")
+    #     # 기존 파일 삭제
+    #     if output_j_csv.exists():
+    #         os.remove(output_j_csv)
+    #     if output_p_csv.exists():
+    #         os.remove(output_p_csv)
 
-    # return all_rows
+    #     df_j.to_csv(output_j_csv, index=False, encoding="utf-8-sig")
+    #     df_p.to_csv(output_p_csv, index=False, encoding="utf-8-sig")
 
+    #     print(f"✅ OpenAI PII 탐지 완료: {len(df_j)} 준식별, {len(df_p)} 식별 rows 저장됨")
 
 
 if __name__ == "__main__":
-    print("🚀 PII Detector 시작됨") 
-    
-    # 각 도메인별 입력·출력·필드 매핑
-    domain_config = {
-        "민사": {"input": "regex_based_doc_parsing/data_/sentence_split_json/1.민사/set1",
-               "output": "regex_based_doc_parsing/data_/pii_detection_output/민사/set1",
-               "case_field": "1", "detail_field": "1"},
-        "가사": {"input": "regex_based_doc_parsing/data_/sentence_split_json/2.가사/set1",
-               "output": "regex_based_doc_parsing/data_/pii_detection_output/가사/set1",
-               "case_field": "1", "detail_field": "2"},
-        "특허": {"input": "regex_based_doc_parsing/data_/sentence_split_json/3.특허/set1",
-               "output": "regex_based_doc_parsing/data_/pii_detection_output/특허/set1",
-               "case_field": "1", "detail_field": "3"},
-        "행정": {"input": "regex_based_doc_parsing/data_/sentence_split_json/4.행정/set1",
-               "output": "regex_based_doc_parsing/data_/pii_detection_output/행정/set1",
-               "case_field": "2", "detail_field": "4"},
-        "형사": {"input": "regex_based_doc_parsing/data_/sentence_split_json/5.형사/set1",
-               "output": "regex_based_doc_parsing/data_/pii_detection_output/형사/set1",
-               "case_field": "3", "detail_field": "5"},
-    }
+    print("🚀 run_pii_detection 단일 테스트 실행")
 
-    base_path = Path("C:/Users/megan/onestone/BOAZ_Data_preprocess_logics/regex_based_doc_parsing/data_/")
-    output_j_csv = base_path / "output_j.csv"
-    output_p_csv = base_path / "output_p.csv"
+    test_sentences = [
+        "홍길동은 서울특별시 강남구 테헤란로 123에 거주하고 있으며, 전화번호는 010-1234-5678이다.",
+        "김영희의 이메일은 younghee@example.com이고, 주민번호는 900101-2345678이다.",
+        "카드번호 1234-5678-9876-5432는 유효하지 않습니다."
+    ]
 
-    # CSV 파일 초기화 (맨 처음에만 헤더 포함)
-    if output_j_csv.exists():
-        os.remove(output_j_csv)
-    if output_p_csv.exists():
-        os.remove(output_p_csv)
-
-    write_header_j = True
-    write_header_p = True
-
-    all_rows = []
-    for domain, cfg in domain_config.items():
-        print(f"📂 {domain} 처리 시작")
-        case_field = cfg["case_field"]
-        detail_field = cfg["detail_field"]
-
-        input_path = Path(cfg["input"])
-        output_path = Path(cfg["output"])
-
-        rows = process_sentence_split_json(input_path, output_path,
-                                           case_field=case_field, detail_field=detail_field)
-
-        if rows:
-            all_rows.extend(rows)
-        else:
-            print(f"⚠️ {domain}에서 탐지된 결과 없음")
-
-    if not all_rows:
-        print("⚠️ 모든 도메인에서 결과가 없습니다.")
-    else:
-        df = pd.DataFrame(all_rows)
-        df_j = df[df["식별/준식별"] == "준식별"]
-        df_p = df[df["식별/준식별"] != "준식별"]
-
-        base_path = Path("C:/Users/megan/onestone/BOAZ_Data_preprocess_logics/regex_based_doc_parsing/data_/")
-        output_j_csv = base_path / "output_j.csv"
-        output_p_csv = base_path / "output_p.csv"
-
-        # 혹시 기존 파일 삭제
-        if output_j_csv.exists():
-            os.remove(output_j_csv)
-        if output_p_csv.exists():
-            os.remove(output_p_csv)
-
-        df_j.to_csv(output_j_csv, index=False, encoding="utf-8-sig")
-        df_p.to_csv(output_p_csv, index=False, encoding="utf-8-sig")
-
-        print(f"✅ 모든 도메인의 결과를 누적하여 저장 완료: {len(df_j)} 준식별 rows, {len(df_p)} 식별 rows")
-    
+    for idx, text in enumerate(test_sentences, 1):
+        print(f"\n📌 테스트 문장 {idx}: {text}")
+        results = run_pii_detection(text)
+        for r in results:
+            print(
+                f"매치: {r['match']}, "
+                f"라벨: {r['label']}, "
+                f"위치: ({r['start']}, {r['end']}), "
+                f"score: {r['score']:.2f}"
+            )
