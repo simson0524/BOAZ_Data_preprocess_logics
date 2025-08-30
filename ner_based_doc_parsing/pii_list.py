@@ -20,9 +20,9 @@ def extract_entities(ner_results, personal_types=None, confidential_types=None, 
             iq = "식별" if etype in identifier_types else "준식별"
             records.append({
                 "단어": ent.get("token",""),
-                "개인/기밀": pc,
-                "식별/준식별": iq,
-                "정보 유형": ent.get("description",""),
-                "score": ent.get("score","")
+                "문서명":"",
+                "부서명":"",
+                "단어유형": ent.get("description",""),
+                "구분": pc,
             })
     return pd.DataFrame(records)
