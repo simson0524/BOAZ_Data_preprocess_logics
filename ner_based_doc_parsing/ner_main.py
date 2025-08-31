@@ -10,8 +10,7 @@ if __name__ == "__main__":
     ner_results = run_ner(sentence)  # 파일별로 sentence에 대해 ner실행 + BI결합
 
     # (2) 후처리 → DataFrame 변환
-    df = extract_entities(ner_results)  #결합된 BI 목록중 (이름 나이 날짜만 남기기)
+    ner_dictionary = extract_entities(ner_results)  #결합된 BI 목록중 (이름 나이 날짜만 남기기)
 
-    print(df)
+    print(ner_dictionary)
     # 필요시 저장
-    # df.to_csv("NER_entities.csv", index=False, encoding="utf-8-sig")
