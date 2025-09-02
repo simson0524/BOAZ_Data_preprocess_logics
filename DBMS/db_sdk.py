@@ -1,13 +1,15 @@
-import psycopg2
 from psycopg2.extras import execute_values
+from psycopg2 import sql
+import psycopg2
+import re
 
 def get_connection():
     return psycopg2.connect(
-        host="localhost",
-        port="5432",
-        dbname="postgres",
-        user="postgres",
-        password="postgres"
+        host="127.0.0.1",     # docker-compose 사용 시 service name
+        port="55432",          # PostgreSQL 포트 (docker-compose.yml 확인)
+        dbname="postgres",     # DB 이름
+        user="student1",     # 사용자
+        password="onestone"  # 비밀번호
     )
 
 def create_tables():
@@ -59,15 +61,38 @@ def delete_row(table_name, word):
     cursor.close()
     conn.close()
 
-# 특정 단어가 포함 된 행 조회 -> return 특정 행의 전체 col value
-def fetch_all(table_name):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM {table_name}") 
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return rows
+# 특정 sentence에 정답지에 포함된 단어들과 class를 모두 반환하는
+def find_words_in_sentence_for_doc(conn, sentence, table_name, doc_name=None):
+    if doc_name:
+        query = sql.SQL(
+            """
+            SELECT DISTINCT "단어", "구분"
+            FROM {table}
+            WHERE "문서명" = %s
+              AND %s LIKE ('%%' || "단어" || '%%')
+            """
+        ).format(
+            table=sql.Identifier(table_name)
+        )
+        params = (doc_name, sentence)
+    else:
+        query = sql.SQL(
+            """
+            SELECT DISTINCT "단어", "구분"
+            FROM {table}
+            WHERE %s LIKE ('%%' || "단어" || '%%')
+            """
+        ).format(
+            table=sql.Identifier(table_name)
+        )
+        params = (sentence,)
+
+    with conn.cursor() as cur:
+        cur.execute(query, params)
+        rows = cur.fetchall()
+
+    return rows  # [(단어, 구분), (단어, 구분), ...]
+
 
 def fetch_rows(table_name, column_name, keyword):
     conn = get_connection()
