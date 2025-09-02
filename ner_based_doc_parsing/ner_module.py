@@ -465,119 +465,162 @@ ner_code = {
     'TMI_PROJECT': '프로젝트',
     'TMIG_GENRE': '게임장르',
     'TM_SPORTS': '스포츠레저기술규칙'}
+# ner_module_min.py  (간결 버전)
 
-# 클래스와 index 변환 함수들
+import os
+import time
+from typing import Any, Dict, List, Tuple
+
+from huggingface_hub import InferenceClient
+from transformers import AutoTokenizer
+
+# --- 전제: 아래 두 개는 네가 기존에 선언한 것을 그대로 둔다고 가정 ---
+# labels = [...]
+# ner_code = {...}
+
+# 라벨 매핑
 label2id = {label: i for i, label in enumerate(labels)}
 id2label = {i: label for label, i in label2id.items()}
 
-client = InferenceClient(provider="auto", api_key=os.environ.get("HF_TOKEN"))
+# HF 토큰 확인 및 클라이언트/토크나이저 준비 (한 번만)
+HF_TOKEN = os.environ.get("HF_TOKEN")
+if not HF_TOKEN:
+    raise RuntimeError("환경변수 HF_TOKEN 이 설정되어 있지 않습니다. os.environ['HF_TOKEN'] = 'hf_xxx' 로 설정하세요.")
+
+client = InferenceClient(provider="auto", api_key=HF_TOKEN)
 tokenizer = AutoTokenizer.from_pretrained("KPF/KPF-bert-ner")
+
+# 청크 파라미터
 MAX_LEN, STRIDE = 510, 50
 
-def chunk_text_with_offsets(text: str):
+
+def chunk_text_with_offsets(text: str) -> List[Tuple[str, int]]:
+    """긴 문장을 토큰 길이 기준으로 겹치며 분할하고 (부분문장, 원문 시작오프셋)을 반환."""
     enc = tokenizer(text, return_offsets_mapping=True, add_special_tokens=False)
     ids, offsets = enc["input_ids"], enc["offset_mapping"]
-    chunks, start = [], 0
+    chunks: List[Tuple[str, int]] = []
+    start = 0
     while start < len(ids):
         end = min(len(ids), start + MAX_LEN)
-        char_s, char_e = offsets[start][0], offsets[end-1][1]
+        if end == 0:
+            break
+        char_s = offsets[start][0]
+        char_e = offsets[end - 1][1]
         chunks.append((text[char_s:char_e], char_s))
-        if end == len(ids): break
+        if end == len(ids):
+            break
         start = end - STRIDE
     return chunks
 
-def safe_inference(text, model="KPF/KPF-bert-ner", max_retries=3, wait_sec=30):
-    for attempt in range(1, max_retries+1):
+
+def safe_inference(text: str, model: str = "KPF/KPF-bert-ner", max_retries: int = 3, wait_sec: int = 30) -> List[Dict[str, Any]]:
+    """서버 500 오류에 대해 재시도하며 token_classification 호출."""
+    for attempt in range(1, max_retries + 1):
         try:
             return client.token_classification(text, model=model)
         except Exception as e:
-            if "500" in str(e):
-                tqdm.write(f"⚠️ 서버 오류 → {wait_sec}초 대기 후 재시도")
+            msg = str(e)
+            if "500" in msg and attempt < max_retries:
+                print(f"⚠️ 서버 오류 → {wait_sec}초 대기 후 재시도 ({attempt}/{max_retries})")
                 time.sleep(wait_sec)
-            else:
-                tqdm.write(f"❌ 오류 발생: {e}")
-                break
+                continue
+            print(f"❌ 추론 실패: {e}")
+            return []
     return []
 
-def merge_bi(entities):
-    merged, buffer = [], None
+
+def merge_bi(entities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    BIO 토큰 엔티티 리스트를 결합.
+    - 연속된 B-/I- (동일 entity_type) 토큰을 하나로 묶고 span/score 갱신
+    - O 라벨은 그대로 유지
+    """
+    merged: List[Dict[str, Any]] = []
+    buffer: Dict[str, Any] | None = None
+
     for ent in entities:
-        bio = ent["bio_label"]
-        if bio.startswith("B-"):
-            if buffer: merged.append(buffer)
+        bio = ent.get("bio_label", "O")
+        ent_type = ent.get("entity_type", "O")
+
+        if isinstance(bio, str) and bio.startswith("B-"):
+            if buffer:
+                merged.append(buffer)
             buffer = ent.copy()
-        elif bio.startswith("I-") and buffer and buffer["entity_type"] == ent["entity_type"]:
-            buffer["token"] += ent["token"].replace("##", "")
-            buffer["span"][1] = ent["span"][1]
-            buffer["score"] = round((buffer["score"] + ent["score"]) / 2, 3)
+
+        elif isinstance(bio, str) and bio.startswith("I-") and buffer and buffer.get("entity_type") == ent_type:
+            # 토큰 이어붙이기(워드피스 접두어 제거)
+            buffer["token"] = str(buffer.get("token", "")) + str(ent.get("token", "")).replace("##", "")
+            # span 끝 확장
+            span = buffer.get("span", [0, 0])
+            span[1] = ent.get("span", span)[1]
+            buffer["span"] = span
+            # 점수 이동 평균
+            prev = float(buffer.get("score", 0.0))
+            cur = float(ent.get("score", 0.0))
+            buffer["score"] = round((prev + cur) / 2, 3)
+
         else:
-            if buffer: merged.append(buffer); buffer=None
+            if buffer:
+                merged.append(buffer)
+                buffer = None
             merged.append(ent)
-    if buffer: merged.append(buffer)
+
+    if buffer:
+        merged.append(buffer)
+
     return merged
-def run_ner(input_dir: str, n_files: int = None, batch_size: int = 5):
+
+
+def run_ner(sentence: str) -> List[Dict[str, Any]]:
     """
-    NER 수행 → JSON 저장 안 하고 → 메모리 상 결과(list) 반환
+    입력: 단일 문장 문자열
+    출력: [{"sentence": str, "entities": [ {token,bio_label,entity_type,description,score,span}, ... ]}]
     """
-    json_paths = sorted(glob.glob(os.path.join(input_dir, "*.json")))
-    if n_files:
-        json_paths = json_paths[:n_files]
-    total_files = len(json_paths)
+    sent = (sentence or "").strip()
+    if not sent:
+        return [{"sentence": "", "entities": []}]
 
-    all_results = []
+    # 청크 분할
+    enc_len = len(tokenizer.encode(sent, add_special_tokens=False))
+    chunks = [(sent, 0)] if enc_len <= MAX_LEN else chunk_text_with_offsets(sent)
 
-    for i, fp in enumerate(tqdm(json_paths, desc="📂 파일 처리", unit="파일", ncols=100)):
-        if i % batch_size == 0:
-            batch_num = i // batch_size + 1
-            tqdm.write(f"\n📦 배치 {batch_num} 시작 (총 {total_files}개 중 {i+1}~{min(i+batch_size,total_files)})")
+    # 추론
+    all_entities: List[Dict[str, Any]] = []
+    for chunk_text, offset in chunks:
+        toks = safe_inference(chunk_text)
+        if not toks:
+            print("⚠️ 추론 실패 청크 스킵")
+            continue
 
-        with open(fp, "r", encoding="utf-8") as f:
-            obj = json.load(f)
+        for ent in toks:
+            # entity_group: "LABEL_3" 또는 이미 BIO 라벨 문자열일 수도 있음
+            entity_group = ent.get("entity_group", "O")
+            bio_lbl = "O"
+            if isinstance(entity_group, str):
+                try:
+                    _, idx_str = entity_group.split("_")
+                    idx = int(idx_str)
+                    bio_lbl = id2label.get(idx, "O")
+                except Exception:
+                    bio_lbl = entity_group  # 이미 BIO 라벨일 수 있음
 
-        # JSON 구조: {"data": {...}}
-        item = obj.get("data", {})
-        sent    = item.get("sentence", "")
-        section = item.get("caseField", "")
-        field   = item.get("detailField", "")
-        orig_id = item.get("id", "")
-        filename= item.get("filename", "")
+            ent_type = bio_lbl.split("-", 1)[-1] if "-" in bio_lbl else bio_lbl
+            desc = ner_code.get(ent_type, ent_type)
 
-        # --- NER 청크 처리 ---
-        enc_len = len(tokenizer.encode(sent, add_special_tokens=False))
-        chunks = [(sent, 0)] if enc_len <= MAX_LEN else chunk_text_with_offsets(sent)
+            all_entities.append({
+                "token": str(ent.get("word", "")).lstrip("##"),
+                "bio_label": bio_lbl,
+                "entity_type": ent_type,
+                "description": desc,
+                "score": round(float(ent.get("score", 0.0)), 3),
+                "span": [int(ent.get("start", 0) + offset), int(ent.get("end", 0) + offset)],
+            })
 
-        all_entities = []
-        for chunk_text, offset in chunks:
-            toks = safe_inference(chunk_text)
-            for ent in toks:
-                # entity_group: 예) "LABEL_3"
-                _, idx_str = ent["entity_group"].split("_")
-                idx      = int(idx_str)
-                bio_lbl  = id2label.get(idx, "O")
-                ent_type = bio_lbl.split("-", 1)[-1]
-                desc     = ner_code.get(ent_type, ent_type)
+    # BIO 병합
+    merged = merge_bi(all_entities)
 
-                all_entities.append({
-                    "token": ent["word"].lstrip("##"),
-                    "bio_label": bio_lbl,
-                    "entity_type": ent_type,
-                    "description": desc,
-                    "score": round(ent["score"], 3),
-                    "span": [ent["start"]+offset, ent["end"]+offset]
-                })
-
-        merged = merge_bi(all_entities)
-
-        # 결과 저장 (메모리에서만 유지)
-        all_results.append({
-            "sentence": sent,
-            "section": section,
-            "field": field,
-            "id": orig_id,
-            "filename": filename,
-            "entities": merged
-        })
-
-        time.sleep(1)
-
-    return all_results
+    # 결과 리스트로 반환
+    return [{
+        "sentence": sent,
+        "entities": merged
+    }]
