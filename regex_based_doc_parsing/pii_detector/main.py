@@ -77,8 +77,18 @@ def run_pii_detection(text: str) -> List[Dict]:
                     m["score"] = detector.score(m["match"])
                 else:
                     m["score"] = 0.0
+            label = m["label"]
+            gubun = DETECTOR_TYPE_MAP.get(label,{}).get("개인/기밀","Unknown")
 
-            results.append(m)
+            results_item = {
+                "단어": m["match"],
+                "부서명": None,
+                "문서명": None,
+                "단어유형": label,
+                "구분": gubun
+            }
+
+            results.append(results_item)
 
     return results
                 
