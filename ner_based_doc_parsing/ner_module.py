@@ -620,7 +620,4 @@ def run_ner(sentence: str) -> List[Dict[str, Any]]:
     merged = merge_bi(all_entities)
 
     # 결과 리스트로 반환
-    return [{
-        "sentence": sent,
-        "entities": merged
-    }]
+    return merged

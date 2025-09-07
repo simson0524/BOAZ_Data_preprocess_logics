@@ -1,19 +1,24 @@
 from psycopg2.extras import execute_values
 from psycopg2 import sql
 import psycopg2
+import yaml
 import re
 
+
 def get_connection():
+    with open("../PIIClassifier/test_config.yaml", 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+
     return psycopg2.connect(
-        host="127.0.0.1",     # docker-compose 사용 시 service name
-        port="55432",          # PostgreSQL 포트 (docker-compose.yml 확인)
-        dbname="postgres",     # DB 이름
-        user="student1",     # 사용자
-        password="onestone"  # 비밀번호
+        host=config['db']['host'],     # docker-compose 사용 시 service name
+        port=config['db']['port'],          # PostgreSQL 포트 (docker-compose.yml 확인)
+        dbname=config['db']['dbname'],     # DB 이름
+        user=['db']['user'],     # 사용자
+        password=['db']['password']  # 비밀번호
     )
 
-def create_tables():
-    conn = get_connection()
+
+def create_tables(conn):
     cursor = conn.cursor()
     for table in ["개인정보", "준식별자", "기밀정보"]:
         cursor.execute(f"""
@@ -27,21 +32,57 @@ def create_tables():
         """)
     conn.commit()
     cursor.close()
-    conn.close()
 
-def truncate_tables():
-    conn = get_connection()
+
+def create_metric_tables(conn):
     cursor = conn.cursor()
-    for table in ["개인정보", "준식별자", "기밀정보"]:
+    for table in ["모델_개인", "모델_기밀", "검증1_개인", "검증2_개인", "검증3_개인", "검증1_기밀", "검증2_기밀", "검증3_기밀"]:
+        cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {table} (
+                test_name TEXT,
+                timestamp TEXT,
+                m_0_0 TEXT,
+                m_0_1 TEXT,
+                m_0_2 TEXT,
+                m_1_0 TEXT,
+                m_1_1 TEXT,
+                m_1_2 TEXT,
+                m_2_0 TEXT,
+                m_2_1 TEXT,
+                m_2_2 TEXT,
+            );
+        """)
+    conn.commit()
+    cursor.close()
+
+
+def create_prediction_tables(conn):
+    cursor = conn.cursor()
+    for table in ["prediction"]:
+        cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {table} (
+                test_name TEXT,
+                timestamp TEXT,
+                단어 TEXT,
+                prediction_level TEXT,
+                ground_truth TEXT,
+                prediction TEXT,
+            );
+        """)
+    conn.commit()
+    cursor.close()
+
+
+def truncate_tables(conn, table_name):
+    cursor = conn.cursor()
+    for table in [table_name]:
         cursor.execute(f"TRUNCATE TABLE {table} RESTART IDENTITY;")
     conn.commit()
     cursor.close()
-    conn.close()
     print("🗑️ 모든 테이블 데이터 초기화 완료")
 
 
-def add_rows(table_name, rows):
-    conn = get_connection()
+def add_rows(conn, table_name, rows):
     cursor = conn.cursor()
     query = f"""
         INSERT INTO {table_name}
@@ -51,15 +92,37 @@ def add_rows(table_name, rows):
     execute_values(cursor, query, rows)
     conn.commit()
     cursor.close()
-    conn.close()
 
-def delete_row(table_name, word):
-    conn = get_connection()
+
+def add_metric_rows(conn, table_name, rows):
+    cursor = conn.cursor()
+    query = f"""
+        INSERT INTO {table_name}
+        (test_name, timestamp, m_0_0, m_0_1, m_0_2, m_1_0, m_1_1, m_1_2, m_2_0, m_2_1, m_2_2)
+        VALUES %s
+    """
+    execute_values(cursor, query, rows)
+    conn.commit()
+    cursor.close()
+
+
+def add_prediction_rows(conn, table_name, rows):
+    cursor = conn.cursor()
+    query = f"""
+        INSERT INTO {table_name}
+        (test_name, timestamp, 단어, prediction_level, ground_truth, prediction)
+        VALUES %s
+    """
+    execute_values(cursor, query, rows)
+    conn.commit()
+    cursor.close()
+
+
+def delete_row(conn, table_name, word):
     cursor = conn.cursor()
     cursor.execute(f"DELETE FROM {table_name} WHERE 단어 = %s", (word,))
     conn.commit()
     cursor.close()
-    conn.close()
 
 # 특정 sentence에 정답지에 포함된 단어들과 class를 모두 반환하는
 def find_words_in_sentence_for_doc(conn, sentence, table_name, doc_name=None):
@@ -94,23 +157,19 @@ def find_words_in_sentence_for_doc(conn, sentence, table_name, doc_name=None):
     return rows  # [(단어, 구분), (단어, 구분), ...]
 
 
-def fetch_rows(table_name, column_name, keyword):
-    conn = get_connection()
+def fetch_rows(conn, table_name, column_name, keyword):
     cursor = conn.cursor()
     query = f"SELECT * FROM {table_name} WHERE {column_name} LIKE %s"
     cursor.execute(query, (f"%{keyword}%",))
     rows = cursor.fetchall()
     cursor.close()
-    conn.close()
     return rows
 
 
 
-def cnt(table_name):
-    conn = get_connection()
+def cnt(conn, table_name):
     cursor = conn.cursor()
     cursor.execute(f"SELECT count(*) FROM {table_name}")
     rows = cursor.fetchall()
     cursor.close()
-    conn.close()
     return rows
