@@ -5,16 +5,18 @@ import yaml
 import re
 
 
-def get_connection():
-    with open("../PIIClassifier/test_config.yaml", 'r', encoding='utf-8') as f:
+def get_connection(config_path="../../PIIClassifier/test_config.yaml"):
+    with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
+
+    print(config)
 
     return psycopg2.connect(
         host=config['db']['host'],     # docker-compose 사용 시 service name
         port=config['db']['port'],          # PostgreSQL 포트 (docker-compose.yml 확인)
         dbname=config['db']['dbname'],     # DB 이름
-        user=['db']['user'],     # 사용자
-        password=['db']['password']  # 비밀번호
+        user=config['db']['user'],     # 사용자
+        password=config['db']['password']  # 비밀번호
     )
 
 
@@ -49,7 +51,7 @@ def create_metric_tables(conn):
                 m_1_2 TEXT,
                 m_2_0 TEXT,
                 m_2_1 TEXT,
-                m_2_2 TEXT,
+                m_2_2 TEXT
             );
         """)
     conn.commit()
@@ -66,7 +68,7 @@ def create_prediction_tables(conn):
                 단어 TEXT,
                 prediction_level TEXT,
                 ground_truth TEXT,
-                prediction TEXT,
+                prediction TEXT
             );
         """)
     conn.commit()
@@ -124,7 +126,7 @@ def delete_row(conn, table_name, word):
     conn.commit()
     cursor.close()
 
-# 특정 sentence에 정답지에 포함된 단어들과 class를 모두 반환하는
+# 특정 sentence에 정답지에 포함된 단어들과 class를 모두 반환하는(장기적으로 봤을때, 그냥 테이블에 있는 전체 열 값들을 반환하게 해야할 듯)
 def find_words_in_sentence_for_doc(conn, sentence, table_name, doc_name=None):
     if doc_name:
         query = sql.SQL(
@@ -157,6 +159,15 @@ def find_words_in_sentence_for_doc(conn, sentence, table_name, doc_name=None):
     return rows  # [(단어, 구분), (단어, 구분), ...]
 
 
+def fetch_all_rows(conn, table_name):
+    cursor = conn.cursor()
+    query = f"SELECT * FROM {table_name};"
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    cursor.close()
+    return rows
+
+
 def fetch_rows(conn, table_name, column_name, keyword):
     cursor = conn.cursor()
     query = f"SELECT * FROM {table_name} WHERE {column_name} LIKE %s"
@@ -164,7 +175,6 @@ def fetch_rows(conn, table_name, column_name, keyword):
     rows = cursor.fetchall()
     cursor.close()
     return rows
-
 
 
 def cnt(conn, table_name):
