@@ -8,19 +8,19 @@ import os
 # PostgreSQL 연결 설정
 def get_connection():
     return psycopg2.connect(
-        host="localhost",     # docker-compose 사용 시 service name
-        port="5432",          # PostgreSQL 포트 (docker-compose.yml 확인)
+        host="127.0.0.1",     # docker-compose 사용 시 service name
+        port="55432",          # PostgreSQL 포트 (docker-compose.yml 확인)
         dbname="postgres",     # DB 이름
-        user="postgres",     # 사용자
-        password="postgres"  # 비밀번호
+        user="student1",     # 사용자
+        password="onestone"  # 비밀번호
     )
 
 
-# 테이블 생성 함수 (정답사전 하나만)
+# 테이블 생성 함수 (정답지 하나만)
 def create_answer_table(conn):
     cursor = conn.cursor()
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS 정답사전 (
+        CREATE TABLE IF NOT EXISTS 정답지 (
             단어 TEXT,
             부서명 TEXT,
             문서명 TEXT,
@@ -49,15 +49,15 @@ def process_csv_to_answer_table(file_path):
     df.columns = df.columns.str.strip()
 
     rows = [tuple(row) for row in df.values]
-    insert_data(conn, "정답사전", rows)
+    insert_data(conn, "정답지", rows)
 
     conn.close()
-    print(f"[INFO] {file_path} → 정답사전 DB 적재 완료")
+    print(f"[INFO] {file_path} → 정답지 테이블 적재 완료")
 
 
 # 메인 실행
 if __name__ == "__main__":
-    csv_folder = r"정답 사전이 있는 경로"
+    csv_folder = "/home/student1/DataPreprocessLogics/document_generation/document_data_4"
     csv_files = glob.glob(os.path.join(csv_folder, "*.csv"))
 
     if not csv_files:

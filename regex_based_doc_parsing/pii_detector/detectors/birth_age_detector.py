@@ -1,6 +1,6 @@
 import re
 from typing import List, Dict
-from detectors.base import BaseDetector  # base.py에 정의된 추상클래스
+from .base import BaseDetector  # base.py에 정의된 추상클래스
 
 class BirthAgeDetector(BaseDetector):
     def detect(self, text: str) -> List[Dict]:

@@ -6,11 +6,11 @@ import sys
 # PostgreSQL 연결 설정
 def get_connection():
     return psycopg2.connect(
-        host="localhost",     # docker-compose 사용 시 service name
-        port="5432",          # PostgreSQL 포트 (docker-compose.yml 확인)
+        host="127.0.0.1",     # docker-compose 사용 시 service name
+        port="55432",          # PostgreSQL 포트 (docker-compose.yml 확인)
         dbname="postgres",     # DB 이름
-        user="postgres",     # 사용자
-        password="postgres"  # 비밀번호
+        user="student1",     # 사용자
+        password="onestone"  # 비밀번호
     )
 
 # 테이블 생성 함수
@@ -78,7 +78,7 @@ import glob
 import os
 
 if __name__ == "__main__":
-    csv_folder = r"C:\Users\megan\onestone\BOAZ_Data_preprocess_logics\DBMS\개발부"
+    csv_folder = "/home/student1/DataPreprocessLogics/DBMS"
     csv_files = glob.glob(os.path.join(csv_folder, "*.csv"))
 
     if not csv_files:
