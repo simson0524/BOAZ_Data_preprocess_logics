@@ -1,6 +1,6 @@
 import re
 from typing import List, Dict
-from detectors.base import BaseDetector  # 추상클래스
+from .detectors.base import BaseDetector  # 추상클래스
 
 
 

@@ -2,16 +2,16 @@
 import json
 from pathlib import Path
 from typing import List, Dict
-from detectors.name_detector import NameDetector
-from detectors.address_detector import AddressDetector
-from detectors.birth_age_detector import BirthAgeDetector
-from detectors.email_detector import EmailDetector
-from detectors.personal_id_detector import JuminDetector
-from detectors.phone_num_detector import PhoneDetector
-from detectors.card_num_detector import CardNumDetector
-from Dict.address_dict import sido_list, sigungu_list, dong_list
-from Dict.name_dict import sn1, nn1, nn2, name
-from Dict.stopwords_dict import stopwords
+from .detectors.name_detector import NameDetector
+from .detectors.address_detector import AddressDetector
+from .detectors.birth_age_detector import BirthAgeDetector
+from .detectors.email_detector import EmailDetector
+from .detectors.personal_id_detector import JuminDetector
+from .detectors.phone_num_detector import PhoneDetector
+from .detectors.card_num_detector import CardNumDetector
+from .Dict.address_dict import sido_list, sigungu_list, dong_list
+from .Dict.name_dict import sn1, nn1, nn2, name
+from .Dict.stopwords_dict import stopwords
 import pandas as pd
 import os
 

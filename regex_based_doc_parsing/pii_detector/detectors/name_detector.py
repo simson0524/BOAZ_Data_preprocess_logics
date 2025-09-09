@@ -1,8 +1,8 @@
 import re
 from typing import List, Dict
-from detectors.base import BaseDetector
-from Dict.name_dict import sn1, nn1, nn2, name
-from Dict.stopwords_dict import stopwords
+from .base import BaseDetector
+from ..Dict.name_dict import sn1, nn1, nn2, name
+from ..Dict.stopwords_dict import stopwords
 
 
 
