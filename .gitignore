@@ -9,3 +9,13 @@ document_data/
 document_data_2/
 document_data_3/
 document_data_4/
+
+stt_env/
+.stt_env/
+
+
+STT/
+DBMS/test.py
+
+TESTFILE/
+.TESTFILE/
