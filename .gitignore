@@ -17,3 +17,5 @@ stt_env/
 STT/
 DBMS/test.py
 
+TESTFILE/
+.TESTFILE/
