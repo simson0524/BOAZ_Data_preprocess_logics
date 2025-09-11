@@ -137,6 +137,18 @@ def add_prediction_rows(conn, table_name, rows):
     cursor.close()
 
 
+def add_manual_validation_rows(conn, table_name, rows):
+    cursor = conn.cursor()
+    query = f"""
+        INSERT INTO {table_name}
+        (test_name, timestamp, generated_sent, 단어, generation_target_label, validated_label)
+        VALUES %s
+    """
+    execute_values(cursor, query, rows)
+    conn.commit()
+    cursor.close()
+
+
 def delete_row(conn, table_name, word):
     cursor = conn.cursor()
     cursor.execute(f"DELETE FROM {table_name} WHERE 단어 = %s", (word,))
