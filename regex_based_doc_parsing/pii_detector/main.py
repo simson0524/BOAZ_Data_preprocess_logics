@@ -47,7 +47,7 @@ DETECTOR_TYPE_MAP = {
 }
 
 
-def run_pii_detection(text: str) -> List[Dict]:
+def run_regex_detection(text: str) -> List[Dict]:
     """
     주어진 텍스트에서 모든 디텍터를 돌며 PII를 탐지하고 결과 리스트 반환
     """
