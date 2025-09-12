@@ -253,8 +253,10 @@ class ConfusionMatrixPipeline:
             last_task_id = self.uploaded_task_ids[-1]
             result = self.wait_for_task_label(last_task_id)
             print(f"🔍 Task {last_task_id} 결과: {result}")
+            return result
         else:
             print("⚠️ 업로드된 태스크가 없습니다.")
+            return None
 
 
 ###########파이프라인 실행##################
