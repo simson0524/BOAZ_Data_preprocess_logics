@@ -7,7 +7,7 @@ from label_studio_sdk.client import LabelStudio
 from label_studio_sdk.label_interface import LabelInterface
 from label_studio_sdk.label_interface.create import choices
 
-class LabelStudioProjectManager:
+class DictMatchProjectManager:
     def __init__(self, base_url: str, api_key: str,db_conn_info=None):
         self.label_studio_url = base_url
         self.api_key = api_key
@@ -56,8 +56,6 @@ class LabelStudioProjectManager:
             time.sleep(1)
         raise RuntimeError("Label Studio 서버가 준비되지 않았습니다.")
 
-    
-
     # ------------------------
     # Label Studio SDK 연결
     # ------------------------
@@ -72,23 +70,9 @@ class LabelStudioProjectManager:
             raise RuntimeError(f"SDK 연결 실패: {e}")
         
 
-    # ------------------------
-    # PostgreSQL 데이터 로드
-    # ------------------------
-    def load_from_postgres(self, table_name: str):
-        if not self.db_conn_info:
-            raise ValueError("PostgreSQL 연결 정보(db_conn_info)가 필요합니다.")
 
-        query = f"""
-        SELECT generated_sent, "단어", generation_target_label, validated_label
-        FROM {table_name};
-        """
-
-        conn = psycopg2.connect(**self.db_conn_info)
-        df = pd.read_sql(query, conn)
-        conn.close()
-
-        return df.to_dict(orient="records")
+    def load_from_list(self, data_list):
+        return pd.DataFrame(data_list)
 
 
     # ------------------------
@@ -109,7 +93,7 @@ class LabelStudioProjectManager:
                         <Choice value="No"/>
                     </Choices>
                     <View style="margin-top: 20px"/>
-                    <Header value="📌 참고 정보: Ground Truth=$gt / Validated Label=$vl"/>
+                    <Header value="📌 참고 정보: Validated Label=$vl"/>
                     <View style="margin-top: 20px"/>
                 </View>
                 """
@@ -126,8 +110,8 @@ class LabelStudioProjectManager:
         tasks = []
         manual_validation = []
         for _, row in df.iterrows():
-            sentence = row["generated_sent"]
-            span = row["단어"]
+            sentence = row["sentence"]
+            span = row["span_text"]
             start_positions = []
             start = 0
             while True:
@@ -146,8 +130,8 @@ class LabelStudioProjectManager:
                         "span": span,
                         "start": start_idx,
                         "end": end_idx,
-                        "gt": row["generation_target_label"],
-                        "vl": row.get("validated_label", "")
+                        #"gt": row["generation_target_label"],
+                        "vl": row["label"]
                     })
 
                
@@ -155,7 +139,7 @@ class LabelStudioProjectManager:
                     "data": {
                         "text": sentence,
                         "gt": row.get("generation_target_label", ""),
-                        "vl": row.get("validated_label", "")
+                        "vl": row["label"]
                     },
                     "predictions": [
                         {
@@ -247,12 +231,12 @@ class LabelStudioProjectManager:
     # ------------------------
     # end-to-end 실행
     # ------------------------
-    def run_from_postgres(self, dataset_name, table_name):
+    def run_from_list(self, dataset_name, data_list):
         self.start_label_studio()
         self.connect_sdk()
-        df = self.load_from_postgres(table_name)
+        df = self.load_from_list(data_list)
         self.create_project(dataset_name)
-        tasks, manual_validation = self.prepare_tasks(pd.DataFrame(df))
+        tasks,_ = self.prepare_tasks(df)
         self.upload_tasks(tasks)
         # return manual_validation
         print("📌 웹에서 라벨링 후 fetch_results() 호출하여 결과 확인 가능")
@@ -272,8 +256,42 @@ if __name__ == "__main__":
     LABEL_STUDIO_URL = "http://localhost:8080"
     API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA2NDczNzUxMCwiaWF0IjoxNzU3NTM3NTEwLCJqdGkiOiI2M2UyOTdkZmQ1NmM0N2NkYmYyZGQ0ZDNjZTlhN2JlYyIsInVzZXJfaWQiOiIxIn0.GAP15UfCY29IU0GDlpcmlWlxsWOTDEyC8gXM-ROkXRg"
 
-    manager = LabelStudioProjectManager(base_url=LABEL_STUDIO_URL,api_key=API_KEY, db_conn_info=DB_CONN_INFO)
-    project = manager.run_from_postgres("Manual_Validation_Dataset_Labeling", "confid_validation")
+    # 기존 self.instances 리스트 예시
+    
+    sample_list = [
+    {
+        "sentence": "홍길동이 회사에 출근했다",
+        "input_ids": [101, 2000, 3001],
+        "decoded_input_ids": ["[CLS]", "홍길동", "[SEP]"],
+        "attention_mask": [1, 1, 1],
+        "span_text": "홍길동",
+        "span_ids": [2000],
+        "decoded_span_ids": ["홍길동"],
+        "token_start": 0,
+        "token_end": 2,
+        "label": "개인정보",
+        "validation_priority": 1
+    },
+    {
+        "sentence": "검사 김철수가 환자를 검사했다",
+        "input_ids": [101, 4000, 5001],
+        "decoded_input_ids": ["[CLS]", "김철수", "[SEP]"],
+        "attention_mask": [1, 1, 1],
+        "span_text": "김철수",
+        "span_ids": [4000],
+        "decoded_span_ids": ["김철수"],
+        "token_start": 1,
+        "token_end": 2,
+        "label": "일반정보",
+        "validation_priority": 1
+    }
+]
+
+
+    manager = DictMatchProjectManager(base_url=LABEL_STUDIO_URL,api_key=API_KEY, db_conn_info=DB_CONN_INFO)
+    project = manager.run_from_list("Manual_PII_Dataset_Labeling", sample_list)
+    
+
 
 
     # 라벨링 완료 후 결과 가져오기
@@ -281,19 +299,6 @@ if __name__ == "__main__":
     final_results = manager.fetch_results()
     print(final_results)
 
-## 출력결과
-# 📌 라벨링 결과 fetch 시작...
-# ✅ Task 209 처리 완료 (Yes 라벨)
-# ✅ Task 210 처리 완료 (No 라벨)
-# ✅ Task 211 처리 완료 (No 라벨)
-# ✅ Task 212 처리 완료 (Yes 라벨)
-# ✅ Task 213 처리 완료 (Yes 라벨)
-# ✅ Task 214 처리 완료 (No 라벨)
-# 📌 대기 중인 Task 처리 중...
-# ✅ 모든 Task 처리 완료
-# [(True, '기밀정보', '검사 김철수가 환자를 검사했다'), 
-# (False, None, '검사 김철수가 환자를 검사했다'), 
-# (False, None, '오늘 박민수가 서울에 갔다'),
-# (True, '일반정보', '이메일 test@example.com  로 발송 완료'),
-# (True, '개인정보', '홍길동이 회사에 출근했다'), 
-# (False, None, '전화번호 010-1234-5678 등록 완료')]
+
+# 출력 값 
+# [(True, '개인정보', '홍길동이 회사에 출근했다'), (False, None, '검사 김철수가 환자를 검사했다')] 
