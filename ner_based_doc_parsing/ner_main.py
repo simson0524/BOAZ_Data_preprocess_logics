@@ -1,7 +1,7 @@
 #pip install huggingface_hub
 #pip install transformers
-from ner_module import run_ner
-from pii_list import extract_entities
+from DataPreprocessLogics.ner_based_doc_parsing.ner_module import run_ner
+from DataPreprocessLogics.ner_based_doc_parsing.pii_list import extract_entities
 
 
 def run_ner_detection(sentence):

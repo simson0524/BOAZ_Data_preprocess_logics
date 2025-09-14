@@ -7,11 +7,6 @@ from transformers import AutoTokenizer
 import time
 
 
-# ————————————————
-# 0) (별도) 환경변수에 토큰 세팅
-os.environ['HF_TOKEN'] = "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"
-# ————————————————
-
 labels = [
 #    '<PAD>',
     'B-AFA_ART_CRAFT',

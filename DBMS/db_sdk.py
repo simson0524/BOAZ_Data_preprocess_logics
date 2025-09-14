@@ -5,7 +5,7 @@ import yaml
 import re
 
 
-def get_connection(config_path="../../PIIClassifier/test_config.yaml"):
+def get_connection(config_path="run_config.yaml"):
     with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
