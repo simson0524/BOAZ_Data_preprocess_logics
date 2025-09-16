@@ -188,6 +188,26 @@ def find_words_in_sentence_for_doc(conn, sentence, table_name, doc_name=None):
     return rows  # [(단어, 구분), (단어, 구분), ...]
 
 
+def load_pairs(conn, table_name, doc_name=None):
+    with conn.cursor() as cur:
+        if doc_name:
+            query = sql.SQL("""
+                SELECT DISTINCT "단어", "구분"
+                FROM {table}
+                WHERE "문서명" = %s
+            """).format(table=sql.Identifier(table_name))
+            cur.execute(query, (doc_name,))
+        else:
+            query = sql.SQL('SELECT DISTINCT "단어", "구분" FROM {table}').format(
+                table=sql.Identifier(table_name)
+            )
+            cur.execute(query)
+
+        rows = cur.fetchall()
+
+        return rows
+
+
 def fetch_all_rows(conn, table_name):
     cursor = conn.cursor()
     query = f"SELECT * FROM {table_name};"
