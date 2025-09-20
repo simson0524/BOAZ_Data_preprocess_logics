@@ -224,7 +224,7 @@ class LabelStudioProjectManager:
 # ------------------------
 # 실행 예시
 # ------------------------
-def manual_validation(db_host, db_port, db_name, db_user, db_password, LABEL_STUDIO_URL="http://localhost:8080", api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA2NDczNzUxMCwiaWF0IjoxNzU3NTM3NTEwLCJqdGkiOiI2M2UyOTdkZmQ1NmM0N2NkYmYyZGQ0ZDNjZTlhN2JlYyIsInVzZXJfaWQiOiIxIn0.GAP15UfCY29IU0GDlpcmlWlxsWOTDEyC8gXM-ROkXRg"):
+def manual_validation(db_host, db_port, db_name, db_user, db_password, is_pii, LABEL_STUDIO_URL="http://localhost:8080", api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA2NDczNzUxMCwiaWF0IjoxNzU3NTM3NTEwLCJqdGkiOiI2M2UyOTdkZmQ1NmM0N2NkYmYyZGQ0ZDNjZTlhN2JlYyIsInVzZXJfaWQiOiIxIn0.GAP15UfCY29IU0GDlpcmlWlxsWOTDEyC8gXM-ROkXRg"):
     DB_CONN_INFO = {
         "host": db_host,
         "port": db_port,
@@ -235,8 +235,13 @@ def manual_validation(db_host, db_port, db_name, db_user, db_password, LABEL_STU
     LABEL_STUDIO_URL = LABEL_STUDIO_URL
     API_KEY = api_key
 
+    if is_pii:
+        table_name = "pii_validation"
+    else:
+        table_name = "confid_validation"
+
     manager = LabelStudioProjectManager(base_url=LABEL_STUDIO_URL,api_key=API_KEY, db_conn_info=DB_CONN_INFO)
-    project = manager.run_from_postgres("Manual_Validation_Dataset_Labeling", "confid_validation")
+    project = manager.run_from_postgres("Manual_Validation_Dataset_Labeling", table_name)
 
 
     # 라벨링 완료 후 결과 가져오기
