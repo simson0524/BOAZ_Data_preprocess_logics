@@ -88,7 +88,7 @@ def create_manual_validation_tables(conn):
                 generated_sent TEXT,
                 단어 TEXT,
                 generation_target_label TEXT,
-                validated_label TEXT,
+                validated_label TEXT
             );
         """)
     conn.commit()
@@ -110,12 +110,15 @@ def create_exp_log_tables(conn):
             experiment_start_time TEXT,
             experiment_end_time TEXT,
             model_train_duration TEXT,
-            valid_1_duration TEXT,
-            valid_2_duration TEXT,
-            valid_3_duration TEXT,
+            validation_1_duration TEXT,
+            validation_2_duration TEXT,
+            validation_3_duration TEXT,
             aug_sent_generation_duration TEXT,
             aug_sent_auto_valid_duration TEXT,
             aug_sent_manual_valid_duration TEXT,
+            total_document_counts TEXT,
+            total_sentence_counts TEXT,
+            total_annotation_counts TEXT
         );
     """)
 
@@ -132,9 +135,9 @@ def create_exp_log_tables(conn):
             best_recall TEXT,
             best_micro_f1 TEXT,
             best_confusion_matrix TEXT,
-            CONSTRAINT fk_experiment
+            CONSTRAINT fk_experiment_model_train_performance
                 FOREIGN KEY (experiment_name)
-                REFERENCES experiments (experiment_name)
+                REFERENCES experiment (experiment_name)
                 ON DELETE CASCADE
         );
     """)
@@ -153,9 +156,9 @@ def create_exp_log_tables(conn):
             prediction TEXT,
             source_file_name TEXT,
             sentence_sequence_in_source_file TEXT,
-            CONSTRAINT fk_experiment
+            CONSTRAINT fk_experiment_model_train_sent_dataset_log
                 FOREIGN KEY (experiment_name)
-                REFERENCES experiments (experiment_name)
+                REFERENCES experiment (experiment_name)
                 ON DELETE CASCADE
         );
     """)
@@ -164,7 +167,7 @@ def create_exp_log_tables(conn):
     table_name = "validation_1_performance"
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
-            experiment_name TEXT,
+            experiment_name TEXT PRIMARY KEY,
             validation_1_start_time TEXT,
             validation_1_end_time TEXT,
             hit_counts TEXT,
@@ -176,9 +179,9 @@ def create_exp_log_tables(conn):
             dictionary_size TEXT,
             dictionary_size_delta_rate TEXT,
             confusion_matrix TEXT,
-            CONSTRAINT fk_experiment
+            CONSTRAINT fk_experiment_validation_1_performance
                 FOREIGN KEY (experiment_name)
-                REFERENCES experiments (experiment_name)
+                REFERENCES experiment (experiment_name)
                 ON DELETE CASCADE
         );
     """)
@@ -196,9 +199,9 @@ def create_exp_log_tables(conn):
             prediction TEXT,
             source_file_name TEXT,
             sentence_sequence_in_source_file TEXT,
-            CONSTRAINT fk_experiment
+            CONSTRAINT fk_experiment_validation_1_sent_dataset_log
                 FOREIGN KEY (experiment_name)
-                REFERENCES experiments (experiment_name)
+                REFERENCES experiment (experiment_name)
                 ON DELETE CASCADE
         );
     """)
@@ -207,7 +210,7 @@ def create_exp_log_tables(conn):
     table_name = "validation_2_performance"
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
-            experiment_name TEXT,
+            experiment_name TEXT PRIMARY KEY,
             validation_2_start_time TEXT,
             validation_2_end_time TEXT,
             hit_counts TEXT,
@@ -217,9 +220,9 @@ def create_exp_log_tables(conn):
             mismatch_counts TEXT,
             mismatch_delta_rate TEXT,
             confusion_matrix TEXT,
-            CONSTRAINT fk_experiment
+            CONSTRAINT fk_experiment_validation_2_performance
                 FOREIGN KEY (experiment_name)
-                REFERENCES experiments (experiment_name)
+                REFERENCES experiment (experiment_name)
                 ON DELETE CASCADE
         );
     """)
@@ -237,9 +240,9 @@ def create_exp_log_tables(conn):
             prediction TEXT,
             source_file_name TEXT,
             sentence_sequence_in_source_file TEXT,
-            CONSTRAINT fk_experiment
+            CONSTRAINT fk_experiment_validation_2_sent_dataset_log
                 FOREIGN KEY (experiment_name)
-                REFERENCES experiments (experiment_name)
+                REFERENCES experiment (experiment_name)
                 ON DELETE CASCADE
         );
     """)
@@ -248,7 +251,7 @@ def create_exp_log_tables(conn):
     table_name = "validation_3_performance"
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
-            experiment_name TEXT,
+            experiment_name TEXT PRIMARY KEY,
             validation_3_start_time TEXT,
             validation_3_end_time TEXT,
             model_weight_file_path TEXT,
@@ -256,9 +259,9 @@ def create_exp_log_tables(conn):
             recall TEXT,
             f1 TEXT,
             confusion_matrix TEXT,
-            CONSTRAINT fk_experiment
+            CONSTRAINT fk_experiment_validation_3_performance
                 FOREIGN KEY (experiment_name)
-                REFERENCES experiments (experiment_name)
+                REFERENCES experiment (experiment_name)
                 ON DELETE CASCADE
         );
     """)
@@ -276,19 +279,19 @@ def create_exp_log_tables(conn):
             prediction TEXT,
             source_file_name TEXT,
             sentence_sequence_in_source_file TEXT,
-            CONSTRAINT fk_experiment
+            CONSTRAINT fk_experiment_validation_3_sent_dataset_log
                 FOREIGN KEY (experiment_name)
-                REFERENCES experiments (experiment_name)
+                REFERENCES experiment (experiment_name)
                 ON DELETE CASCADE
         );
     """)
 
     # GPT 문장 생성 데이터셋 별 로그 scheme
-    tabla_name = 'augmented_generation_sent_dataset_log'
+    table_name = 'augmented_generation_sent_dataset_log'
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
             experiment_name TEXT,
-            sentence_id TEXT,
+            sentence_id TEXT PRIMARY KEY,
             generated_sentence TEXT,
             span_text TEXT,
             target_ground_truth TEXT,
@@ -296,9 +299,9 @@ def create_exp_log_tables(conn):
             valid_sentences_counts TEXT,
             invalid_sentences_counts TEXT,
             source_file_name TEXT,
-            CONSTRAINT fk_experiment
+            CONSTRAINT fk_experiment_augmented_generation_sent_dataset_log
                 FOREIGN KEY (experiment_name)
-                REFERENCES experiments (experiment_name)
+                REFERENCES experiment (experiment_name)
                 ON DELETE CASCADE
         );
     """)
