@@ -8,6 +8,7 @@ from matplotlib import rc
 from label_studio_sdk.client import LabelStudio
 import requests
 import psycopg2
+import ast  
 
 
 class ConfusionMatrixPipeline:
@@ -68,16 +69,60 @@ class ConfusionMatrixPipeline:
         rc('font', family='Malgun Gothic')
 
     # ------------------------
-    # 3️⃣ DB 연결
+    # 3️⃣ DB 연결 (기존 DB 버전)
+    # ------------------------
+    # def get_connection(self):
+    #     return psycopg2.connect(**self.db_config)
+
+    # def load_last_row_as_matrix(self, table_name, labels, is_confidential=False):
+    #     conn = self.get_connection()
+    #     try:
+    #         query = f"""
+    #             SELECT *
+    #             FROM {table_name}
+    #             ORDER BY timestamp DESC
+    #             LIMIT 1
+    #         """
+    #         df = pd.read_sql(query, conn)
+    #     finally:
+    #         conn.close()
+
+    #     if df.empty:
+    #         raise ValueError(f"{table_name} 테이블에서 데이터를 가져올 수 없습니다.")
+
+    #     row = df.iloc[-1]
+
+    #     if is_confidential:
+    #         values = [row[col] for col in ['m_0_0', 'm_0_1', 'm_1_0', 'm_1_1']]
+    #         return np.array(values, dtype=float).reshape(2, 2)
+    #     else:
+    #         values = [row[col] for col in [
+    #             'm_0_0','m_0_1','m_0_2',
+    #             'm_1_0','m_1_1','m_1_2',
+    #             'm_2_0','m_2_1','m_2_2'
+    #         ]]
+    #         return np.array(values, dtype=float).reshape(3, 3)
+        
+    # ------------------------
+    # ------------------------
+    # 3️⃣ DB 연결 (새로운 DB 버전)
     # ------------------------
     def get_connection(self):
         return psycopg2.connect(**self.db_config)
 
-    def load_last_row_as_matrix(self, table_name, labels, is_confidential=False):
+    def load_last_row_as_matrix(self, table_name, column_name, is_confidential=False):
+        """
+        DB에서 마지막 행을 불러와서 confusion matrix로 반환.
+        
+        :param table_name: 테이블 이름
+        :param column_name: 리스트 형태로 저장된 confusion matrix 컬럼
+        :param is_confidential: 2x2인지 3x3인지 여부
+        :return: numpy array (2x2 또는 3x3)
+        """
         conn = self.get_connection()
         try:
             query = f"""
-                SELECT *
+                SELECT {column_name}
                 FROM {table_name}
                 ORDER BY timestamp DESC
                 LIMIT 1
@@ -89,17 +134,19 @@ class ConfusionMatrixPipeline:
         if df.empty:
             raise ValueError(f"{table_name} 테이블에서 데이터를 가져올 수 없습니다.")
 
-        row = df.iloc[-1]
+        # DB에서 가져온 값 (리스트 문자열)
+        row_value = df.iloc[0][column_name]
 
+        # 문자열을 실제 리스트로 변환
+        if isinstance(row_value, str):
+            values = ast.literal_eval(row_value)
+        else:
+            values = row_value  # 이미 리스트 형태이면 그대로 사용
+
+        # shape 결정
         if is_confidential:
-            values = [row[col] for col in ['m_0_0', 'm_0_1', 'm_1_0', 'm_1_1']]
             return np.array(values, dtype=float).reshape(2, 2)
         else:
-            values = [row[col] for col in [
-                'm_0_0','m_0_1','m_0_2',
-                'm_1_0','m_1_1','m_1_2',
-                'm_2_0','m_2_1','m_2_2'
-            ]]
             return np.array(values, dtype=float).reshape(3, 3)
 
     # ------------------------
