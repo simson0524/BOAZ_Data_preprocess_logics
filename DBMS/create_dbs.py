@@ -22,8 +22,7 @@ def get_connection(config_path="run_config.yaml"):
 
 
 ### TODO : 기존에 DB 테이블 생성하는 함수 모두 정리해서 올리기 ###
-
-def create_tables(conn):
+def create_dictionary_tables(conn):
     cursor = conn.cursor()
     for table in ["개인정보", "준식별자", "기밀정보"]:
         cursor.execute(f"""
@@ -38,61 +37,62 @@ def create_tables(conn):
     conn.commit()
     cursor.close()
 
-# 각 단계별 검증 지표가 저장될 친구들
-def create_metric_tables(conn):
-    cursor = conn.cursor()
-    for table in ["모델_개인", "모델_기밀", "검증1_개인", "검증2_개인", "검증3_개인", "검증1_기밀", "검증2_기밀", "검증3_기밀"]:
-        cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS {table} (
-                test_name TEXT,
-                timestamp TEXT,
-                m_0_0 TEXT,
-                m_0_1 TEXT,
-                m_0_2 TEXT,
-                m_1_0 TEXT,
-                m_1_1 TEXT,
-                m_1_2 TEXT,
-                m_2_0 TEXT,
-                m_2_1 TEXT,
-                m_2_2 TEXT
-            );
-        """)
-    conn.commit()
-    cursor.close()
+# # 각 단계별 검증 지표가 저장될 친구들, 인데 각 단계별 sent_dataset_log 테이블에서 사용하는데 지워도 되겠지?
+# def create_metric_tables(conn):
+#     cursor = conn.cursor()
+#     for table in ["모델_개인", "모델_기밀", "검증1_개인", "검증2_개인", "검증3_개인", "검증1_기밀", "검증2_기밀", "검증3_기밀"]:
+#         cursor.execute(f"""
+#             CREATE TABLE IF NOT EXISTS {table} (
+#                 test_name TEXT,
+#                 timestamp TEXT,
+#                 m_0_0 TEXT,
+#                 m_0_1 TEXT,
+#                 m_0_2 TEXT,
+#                 m_1_0 TEXT,
+#                 m_1_1 TEXT,
+#                 m_1_2 TEXT,
+#                 m_2_0 TEXT,
+#                 m_2_1 TEXT,
+#                 m_2_2 TEXT
+#             );
+#         """)
+#     conn.commit()
+#     cursor.close()
 
 
-def create_prediction_tables(conn):
-    cursor = conn.cursor()
-    for table in ["pii_prediction, confid_prediction"]:
-        cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS {table} (
-                test_name TEXT,
-                timestamp TEXT,
-                단어 TEXT,
-                prediction_level TEXT,
-                ground_truth TEXT,
-                prediction TEXT
-            );
-        """)
-    conn.commit()
-    cursor.close()
+# # 각 단계별 sent_dataset_log 테이블에서 사용하는데 지워도 되겠지?
+# def create_prediction_tables(conn):
+#     cursor = conn.cursor()
+#     for table in ["pii_prediction", "confid_prediction"]:
+#         cursor.execute(f"""
+#             CREATE TABLE IF NOT EXISTS {table} (
+#                 test_name TEXT,
+#                 timestamp TEXT,
+#                 단어 TEXT,
+#                 prediction_level TEXT,
+#                 ground_truth TEXT,
+#                 prediction TEXT
+#             );
+#         """)
+#     conn.commit()
+#     cursor.close()
 
-# 이게 문장검증2에서 labelbox에 표시될 "아이"들 <- (귀여운 하트)
-def create_manual_validation_tables(conn):
-    cursor = conn.cursor()
-    for table in ["pii_validation, confid_validation"]:
-        cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS {table} (
-                test_name TEXT,
-                timestamp TEXT,
-                generated_sent TEXT,
-                단어 TEXT,
-                generation_target_label TEXT,
-                validated_label TEXT
-            );
-        """)
-    conn.commit()
-    cursor.close()
+
+# def create_manual_validation_tables(conn):
+#     cursor = conn.cursor()
+#     for table in ["pii_validation", "confid_validation"]:
+#         cursor.execute(f"""
+#             CREATE TABLE IF NOT EXISTS {table} (
+#                 test_name TEXT,
+#                 timestamp TEXT,
+#                 generated_sent TEXT,
+#                 단어 TEXT,
+#                 generation_target_label TEXT,
+#                 validated_label TEXT
+#             );
+#         """)
+#     conn.commit()
+#     cursor.close()
 
 ### ------------------------------------------------------ ###
 
@@ -107,6 +107,7 @@ def create_exp_log_tables(conn):
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
             experiment_name TEXT PRIMARY KEY,
+            previous_experiment_name TEXT,
             experiment_start_time TEXT,
             experiment_end_time TEXT,
             model_train_duration TEXT,
@@ -148,7 +149,7 @@ def create_exp_log_tables(conn):
         CREATE TABLE IF NOT EXISTS {table_name} (
             experiment_name TEXT,
             sentence_id TEXT,
-            model_weight_file_path TEXT,
+            validated_epoch TEXT,
             sentence TEXT,
             span_text TEXT,
             index_in_dataset_class TEXT,
@@ -308,3 +309,19 @@ def create_exp_log_tables(conn):
 
     conn.commit()
     cursor.close()
+
+
+if __name__ == "__main__":
+    file_path = input("\n[Insert Absolute Path of Config]\nEmpty for default path: 'run_config.yaml'\n-> ")
+    if file_path:
+        conn = get_connection(config_path=file_path)
+    else:
+        conn = get_connection()
+
+    create_dictionary_tables(conn)
+    # create_metric_tables(conn)
+    # create_prediction_tables(conn)
+    # create_manual_validation_tables(conn)
+    create_exp_log_tables(conn)
+
+    conn.close()

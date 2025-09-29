@@ -223,8 +223,6 @@ class ConfusionMatrixPipeline:
                             return False
                             
 
-            
-
             # timeout 체크
             if time.time() - start_time > timeout:
                 print(f"⚠️ Task {task_id} 라벨링 대기 timeout ({timeout}초)")
