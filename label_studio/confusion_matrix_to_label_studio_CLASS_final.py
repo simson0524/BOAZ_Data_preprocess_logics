@@ -285,11 +285,11 @@ if __name__ == "__main__":
     # 개인정보 프로젝트 실행
     pipeline_pii = ConfusionMatrixPipeline(API_KEY=API_KEY, db_config=db_config)
     print("===== 개인정보 프로젝트 실행 =====")
-    pii_result = pipeline_pii.run(is_pii=True)  # 개인정보만
+    pii_result = pipeline_pii.run(is_pii=True)  # 개인정보만 
     print("✅ 개인정보 프로젝트 결과:", pii_result)
 
     # 기밀정보 프로젝트 실행
     pipeline_conf = ConfusionMatrixPipeline(API_KEY=API_KEY, db_config=db_config)
     print("===== 기밀정보 프로젝트 실행 =====")
-    conf_result = pipeline_conf.run(is_pii=False)  # 기밀정보만
-    print("✅ 기밀정보 프로젝트 결과:", conf_result)
+    conf_result = pipeline_conf.run(is_pii=False)  # 기밀정보만 
+    print("✅ 기밀정보 프로젝트 결과:", conf_result)  

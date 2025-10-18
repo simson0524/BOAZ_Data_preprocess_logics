@@ -281,19 +281,4 @@ if __name__ == "__main__":
     final_results = manager.fetch_results()
     print(final_results)
 
-## 출력결과
-# 📌 라벨링 결과 fetch 시작...
-# ✅ Task 209 처리 완료 (Yes 라벨)
-# ✅ Task 210 처리 완료 (No 라벨)
-# ✅ Task 211 처리 완료 (No 라벨)
-# ✅ Task 212 처리 완료 (Yes 라벨)
-# ✅ Task 213 처리 완료 (Yes 라벨)
-# ✅ Task 214 처리 완료 (No 라벨)
-# 📌 대기 중인 Task 처리 중...
-# ✅ 모든 Task 처리 완료
-# [(True, '기밀정보', '검사 김철수가 환자를 검사했다'), 
-# (False, None, '검사 김철수가 환자를 검사했다'), 
-# (False, None, '오늘 박민수가 서울에 갔다'),
-# (True, '일반정보', '이메일 test@example.com  로 발송 완료'),
-# (True, '개인정보', '홍길동이 회사에 출근했다'), 
-# (False, None, '전화번호 010-1234-5678 등록 완료')]
+
