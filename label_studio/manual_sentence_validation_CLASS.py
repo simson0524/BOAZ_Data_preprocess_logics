@@ -170,7 +170,7 @@ class DictionaryCandidateLabeler:
         if not self.project:
             raise ValueError("프로젝트가 존재하지 않습니다.")
 
-        upload_to_dataset = []
+        manual_chk_completed_list = []
 
         print("📌 라벨링 결과 fetch 시작...")
 
@@ -189,7 +189,7 @@ class DictionaryCandidateLabeler:
                         choice = val.get("choices", [None])[0]
 
                         if choice == "예":
-                            upload_to_dataset.append({
+                            manual_chk_completed_list.append({
                                 "generated_sentence": task.data["generated_sentence"],
                                 "span_token": task.data["span_token"],
                                 "validated_label": task.data["validated_label"],
@@ -207,7 +207,7 @@ class DictionaryCandidateLabeler:
             time.sleep(2)
 
         print("✅ 모든 Task 처리 완료")
-        return upload_to_dataset
+        return manual_chk_completed_list
 
     # ------------------------
     # End-to-End 실행
@@ -225,31 +225,29 @@ class DictionaryCandidateLabeler:
 # ------------------------
 # 실행 예시
 # ------------------------
-# if __name__ == "__main__":
-#     LABEL_STUDIO_URL = "http://localhost:8080"
-#     API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA2Nzk4MDg0MSwiaWF0IjoxNzYwNzgwODQxLCJqdGkiOiJjNGVhZjQwMGMxMTM0NWI0OGY1MGU4NGEzMmQ1ZjY0ZCIsInVzZXJfaWQiOiIxIn0.IbJ-cD260LgojRYVKfa2GwQZ2d5KP0J4xa-tICyU_Tk"
+if __name__ == "__main__":
+    LABEL_STUDIO_URL = "http://localhost:8080"
+    API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA2Nzk4MDg0MSwiaWF0IjoxNzYwNzgwODQxLCJqdGkiOiJjNGVhZjQwMGMxMTM0NWI0OGY1MGU4NGEzMmQ1ZjY0ZCIsInVzZXJfaWQiOiIxIn0.IbJ-cD260LgojRYVKfa2GwQZ2d5KP0J4xa-tICyU_Tk"
 
-#     upload_candidate_to_dataset = [
-# 	{
-# 		"generated_sentence": "홍길동은 인사팀이다",
-# 		"span_token": "홍길동",
-# 		"validated_label": "개인정보",
-# 		"dataset_id": "001"
-# 	},
-# 	{
-# 		"generated_sentence": "검사는 하지 않았다",
-# 		"span_token": "검사",
-# 		"validated_label": "개인정보",
-# 		"dataset_id": "002"
-# 	}]
+    manual_chk_list = [
+	{
+		"generated_sentence": "홍길동은 인사팀이다",
+		"span_token": "홍길동",
+		"validated_label": "개인정보",
+		"dataset_id": "001"
+	},
+	{
+		"generated_sentence": "검사는 하지 않았다",
+		"span_token": "검사",
+		"validated_label": "개인정보",
+		"dataset_id": "002"
+	}]
 
-#     manager = DictionaryCandidateLabeler(LABEL_STUDIO_URL, API_KEY)
-#     project = manager.run_pipeline(is_pii=True, candidate_list=upload_candidate_to_dataset)
+    manager = DictionaryCandidateLabeler(LABEL_STUDIO_URL, API_KEY)
+    project = manager.run_pipeline(is_pii=True, candidate_list=manual_chk_list)
 
-#     input("✅ 웹에서 라벨링 완료 후 엔터를 누르세요...")
-#     upload_to_dataset = manager.fetch_results()
+    input("✅ 웹에서 라벨링 완료 후 엔터를 누르세요...")
+    manual_chk_completed_list = manager.fetch_results()
 
-#     print("\n📦 [최종 업로드 후보 결과]")
-#     # for item in upload_to_dataset:
-#     #     print(item)
-#     print(upload_to_dataset)
+    print("\n📦 [최종 업로드 후보 결과]")
+    print(manual_chk_completed_list)
