@@ -5,7 +5,7 @@ from label_studio_sdk.client import LabelStudio
 #from label_studio_sdk import Client
 import pandas as pd
 
-class DictionaryCandidateLabeler:
+class ManualValidationLabeler:
     def __init__(self, base_url: str, api_key: str):
         self.label_studio_url = base_url
         self.api_key = api_key
@@ -243,7 +243,7 @@ if __name__ == "__main__":
 		"dataset_id": "002"
 	}]
 
-    manager = DictionaryCandidateLabeler(LABEL_STUDIO_URL, API_KEY)
+    manager = ManualValidationLabeler(LABEL_STUDIO_URL, API_KEY)
     project = manager.run_pipeline(is_pii=True, candidate_list=manual_chk_list)
 
     input("✅ 웹에서 라벨링 완료 후 엔터를 누르세요...")
